@@ -15,29 +15,29 @@ namespace Generators
 
         protected override IEnumerator GenerateMazeCoroutine(bool isSlowly = true)
         {
-            visitedCells = new bool[width, height]; // Initialize the visitedCells array
-            cellStack = new Stack<Vector3Int>(); // Initialize the cell stack
+            VisitedCells = new bool[width, height]; // Initialize the visitedCells array
+            CellStack = new Stack<Vector3Int>(); // Initialize the cell stack
 
             SetupMaze();
 
-            var startPosition = FindAndSetStartPosition();
-            cellStack.Push(startPosition);
+            var startPosition = FindAndSetStartPositions();
+            CellStack.Push(startPosition[0]);
             // UpdateTileColor(startPosition);
         
             // Update the starting tile color before entering the main loop
             yield return new WaitForSeconds(waitTime);
-            UpdateTileColor(startPosition);
+            UpdateTileColor(startPosition[0]);
 
             // Loop until all cells have been in the CellStack
-            while (cellStack.Count > 0)
+            while (CellStack.Count > 0)
             {
                 if (isSlowly) 
                 {
                     yield return new WaitForSeconds(waitTime); // Pause execution and resume
                 }
 
-                var currentCell = cellStack.Peek();
-                visitedCells[currentCell.x, currentCell.y] = true;
+                var currentCell = CellStack.Peek();
+                VisitedCells[currentCell.x, currentCell.y] = true;
 
                 var unvisitedNeighbors = GetUnvisitedNeighbors(currentCell);
 
@@ -45,20 +45,20 @@ namespace Generators
                 {
                     var randomNeighbor = unvisitedNeighbors[Random.Range(0, unvisitedNeighbors.Count)];
                     UpdateTileColor(currentCell, randomNeighbor);
-                    cellStack.Push(randomNeighbor);
+                    CellStack.Push(randomNeighbor);
                 }
                 else
                 {
                     // Mark the current cell as visited after backtracking
                     UpdateTileColor(currentCell);
-                    cellStack.Pop();
+                    CellStack.Pop();
                 }
 
                 // Stop the maze generation process
                 if (AllTilesVisited()) break;
             }
 
-            CreateEntranceAndExit();
+            CreateEntrances();
         }
     
         #endregion

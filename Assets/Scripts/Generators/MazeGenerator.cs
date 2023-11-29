@@ -4,7 +4,9 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Serialization;
 using UnityEngine.Tilemaps;
+using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
 namespace Generators
@@ -22,13 +24,16 @@ namespace Generators
     
         [Header("Tilemap")]
         [SerializeField] protected Tilemap tilemap;
-        [SerializeField] protected TileBase whiteTile;
-        [SerializeField] protected TileBase redTile;
-        [SerializeField] protected TileBase greenTile;
+        [SerializeField] protected TileBase wallTile;
+        [SerializeField] protected TileBase unvisitedCellTile;
+        [SerializeField] protected TileBase visitedCellTile;
 
         [Header("UI")]
-        [SerializeField] private TMP_InputField inputWidth;
-        [SerializeField] private TMP_InputField inputHeight;
+        [SerializeField] private Slider inputWidth;
+        [SerializeField] private Slider inputHeight;
+        [SerializeField] private TextMeshProUGUI textWidth;
+        [SerializeField] private TextMeshProUGUI textHeight;
+        
         [SerializeField] private TMP_InputField inputWaitTime;
 
         [Header("Other generators")]
@@ -38,10 +43,10 @@ namespace Generators
         [Space]
         [SerializeField] private UnityEvent onGenerate = new UnityEvent();
     
-        protected bool[,] visitedCells; // To track visited cells
-        protected Stack<Vector3Int> cellStack; // Stack to track visited cells
+        protected bool[,] VisitedCells; // To track visited cells
+        protected Stack<Vector3Int> CellStack; // Stack to track visited cells
 
-        private readonly Vector3Int[] directions = 
+        private readonly Vector3Int[] _directions = 
         {
             new (0, 2, 0), // Up
             new (2, 0, 0), // Right
@@ -106,7 +111,7 @@ namespace Generators
             width = width % 2 == 0 ? width + 1 : width;
             height = height % 2 == 0 ? height + 1 : height;
 
-            visitedCells = new bool[width, height]; // Initialize the VisitedCells array
+            VisitedCells = new bool[width, height]; // Initialize the VisitedCells array
         
             for (int x = -1; x < width + 1; x++)
             {
@@ -117,18 +122,18 @@ namespace Generators
                     if (x == -1 || y == -1 || x == width || y == height)
                     {
                         // Set walls for the border cells
-                        tilemap.SetTile(position, whiteTile);
+                        tilemap.SetTile(position, wallTile);
                     }
                     else if (x % 2 == 0 || y % 2 == 0)
                     {
                         // Set walls for even-indexed cells
-                        tilemap.SetTile(position, whiteTile);
+                        tilemap.SetTile(position, wallTile);
                     }
                     else
                     {
                         // Set empty space for odd-indexed cells
-                        tilemap.SetTile(position, redTile);
-                        visitedCells[x, y] = false;
+                        tilemap.SetTile(position, unvisitedCellTile);
+                        VisitedCells[x, y] = false;
                     }
                 }
             }
@@ -137,53 +142,64 @@ namespace Generators
         /// <summary>
         /// Creates the entrance and exit for the maze.
         /// </summary>
-        protected void CreateEntranceAndExit()
+        protected void CreateEntrances()
         {
-            var entrancePosition = FindRandomEmptyTile();
-            var exitPosition = FindRandomEmptyTile();
+            var numberOfEntrances = Random.Range(2, 5); // Choose the number of entrances (adjust as needed)
 
-            // Ensure entrance and exit positions are valid
-            while (!IsValidEntranceExitPosition(entrancePosition)) entrancePosition = FindRandomEmptyTile();
-            while (!IsValidEntranceExitPosition(exitPosition)) exitPosition = FindRandomEmptyTile();
-        
-            // Adjust entrance position to be at the left edge and exit position to be at the right edge
-            entrancePosition.x = -1;
-            exitPosition.x = width;
+            for (int i = 0; i < numberOfEntrances; i++)
+            {
+                var entrancePosition = FindRandomEmptyTile();
 
-            // Set tiles for entrance and exit
-            tilemap.SetTile(entrancePosition, greenTile);
-            tilemap.SetTile(exitPosition, greenTile);
+                // Ensure entrance position is valid
+                while (!IsValidEntranceExitPosition(entrancePosition))
+                    entrancePosition = FindRandomEmptyTile();
 
-            // Make the second tile for entrance and exit, because outer wall is 2 tiles thick
-            var entrancePosition2 = new Vector3Int(0, entrancePosition.y, 0);
-            var exitPosition2 = new Vector3Int(width - 1, exitPosition.y, 0);
-            tilemap.SetTile(entrancePosition2, greenTile);
-            tilemap.SetTile(exitPosition2, greenTile);
+                // Adjust entrance position to be at the left edge
+                entrancePosition.x = -1;
+
+                // Set tiles for entrance
+                tilemap.SetTile(entrancePosition, visitedCellTile);
+
+                // Make the second tile for entrance, because the outer wall is 2 tiles thick
+                var entrancePosition2 = new Vector3Int(0, entrancePosition.y, 0);
+                tilemap.SetTile(entrancePosition2, visitedCellTile);
+            }
         }
-
         /// <summary>
         /// Finds a starting position for the generation. And sets its self.
         /// </summary>
         /// <returns>The chosen starting position.</returns>
-        protected Vector3Int FindAndSetStartPosition()
+        protected List<Vector3Int> FindAndSetStartPositions()
         {
-            var availableCells = new List<Vector3Int>();
+            var numberOfStartPositions = Random.Range(2, 5); // Choose the number of starting positions (adjust as needed)
+            var startPositions = new List<Vector3Int>();
 
-            // Adds every red tile
-            for (int x = 1; x < width; x += 2)
+            for (int i = 0; i < numberOfStartPositions; i++)
             {
-                for (int y = 1; y < height; y += 2)
+                var availableCells = new List<Vector3Int>();
+
+                // Adds every green tile
+                for (int x = 1; x < width; x += 2)
                 {
-                    availableCells.Add(new Vector3Int(x, y, 0));
+                    for (int y = 1; y < height; y += 2)
+                    {
+                        availableCells.Add(new Vector3Int(x, y, 0));
+                    }
+                }
+
+                if (availableCells.Count != 0)
+                {
+                    var startPosition = GetRandomTile(availableCells);
+                    startPositions.Add(startPosition);
+                }
+                else
+                {
+                    Debug.LogError("No available cells for starting position.");
                 }
             }
 
-            if (availableCells.Count != 0) return GetRandomTile(availableCells);
-        
-            Debug.LogError("No available cells for starting position.");
-            return Vector3Int.zero;
-        }
-    
+            return startPositions;
+        }    
         /// <summary>
         /// Checks if every tile is visited with the generation.
         /// </summary>
@@ -194,34 +210,33 @@ namespace Generators
             {
                 for (int y = 1; y < height; y += 2)
                 {
-                    if (!visitedCells[x, y]) return false; // At least one tile is unvisited
+                    if (!VisitedCells[x, y]) return false; // At least one tile is unvisited
                 }
             }
 
             return true; // All tiles are visited
         }
-    
+
         /// <summary>
         /// Changes the tile in between currentTile and neighborTile to a color. And the currentTile gets changed.
         /// </summary>
         /// <param name="currentTile">The current tile, that gets also changed</param>
         /// <param name="neighborTile">The neighbor to look for the tile in between.</param>
-        /// <param name="isPrims">Idk</param>
         protected void UpdateTileColor(Vector3Int currentTile, Vector3Int neighborTile = default)
         {
             // Making the wallTile green
             if (neighborTile != default)
             {
                 var wallTilePosition = currentTile + (neighborTile - currentTile) / 2;
-                tilemap.SetTile(wallTilePosition, greenTile);
+                tilemap.SetTile(wallTilePosition, visitedCellTile);
             }
 
             // Update the tiles for the path
-            tilemap.SetTile(currentTile, greenTile);
-            tilemap.SetTile(neighborTile, greenTile);
+            tilemap.SetTile(currentTile, visitedCellTile);
+            tilemap.SetTile(neighborTile, visitedCellTile);
         }
     
-        protected List<Vector3Int> GetUnvisitedNeighbors(Vector3Int cell) => directions.Select(direction => cell + direction).Where(neighbor => IsInsideMaze(neighbor) && !visitedCells[neighbor.x, neighbor.y]).ToList();
+        protected List<Vector3Int> GetUnvisitedNeighbors(Vector3Int cell) => _directions.Select(direction => cell + direction).Where(neighbor => IsInsideMaze(neighbor) && !VisitedCells[neighbor.x, neighbor.y]).ToList();
     
         #endregion
 
@@ -239,7 +254,7 @@ namespace Generators
         /// </summary>
         /// <param name="position">The preferred position.</param>
         /// <returns>If it's valid position to spawn.</returns>
-        private bool IsValidEntranceExitPosition(Vector3Int position) => directions.Select(direction => position + direction).Any(adjacentPosition => IsInsideMaze(adjacentPosition) && tilemap.GetTile<TileBase>(adjacentPosition) == greenTile);
+        private bool IsValidEntranceExitPosition(Vector3Int position) => _directions.Select(direction => position + direction).Any(adjacentPosition => IsInsideMaze(adjacentPosition) && tilemap.GetTile<TileBase>(adjacentPosition) == visitedCellTile);
     
         /// <summary>
         /// Find a random tile that is empty in the tile map.
@@ -254,7 +269,7 @@ namespace Generators
             {
                 for (int y = 0; y < height; y++)
                 {
-                    if (tilemap.GetTile<TileBase>(new Vector3Int(x, y, 0)) == greenTile) emptyCells.Add(new Vector3Int(x, y, 0));
+                    if (tilemap.GetTile<TileBase>(new Vector3Int(x, y, 0)) == visitedCellTile) emptyCells.Add(new Vector3Int(x, y, 0));
                 }
             }
 
@@ -283,20 +298,31 @@ namespace Generators
 
         public void ToggleInstantlyGeneration() => generateInstantly = !generateInstantly;
     
-        private void SetHeight(string input)
+        private void UpdateUI()
         {
-            if(currentGenerator.CurrentGeneration != null) StopCoroutine(currentGenerator.CurrentGeneration);
-            int.TryParse(input, out height);
+            textWidth.text = $"Set width: {width}";
+            textHeight.text = $"Set height: {height}";
         }
 
-        private void SetWidth(string input)
+        private void SetHeight(float value)
         {
-            if(currentGenerator.CurrentGeneration != null) StopCoroutine(currentGenerator.CurrentGeneration);
-            int.TryParse(input, out width);
+            height = (int)value;
+            UpdateUI();
         }
 
-        private void SetWaitTime(string input) => float.TryParse(input, out waitTime);
-
+        private void SetWidth(float value)
+        {
+            width = (int)value;
+            UpdateUI();
+        }
+        private void SetWaitTime(string input)
+        {
+            if (float.TryParse(input, out float parsedWaitTime))
+            {
+                // Check if the parsed wait time is within the allowed range
+                waitTime = parsedWaitTime;
+            }
+        }
         #endregion
     }
 }
