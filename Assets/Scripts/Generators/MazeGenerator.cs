@@ -4,7 +4,6 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Serialization;
 using UnityEngine.Tilemaps;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
@@ -21,6 +20,7 @@ namespace Generators
         [SerializeField] protected int height;
         [SerializeField] private bool generateInstantly = true;
         [SerializeField] protected float waitTime = 0.1f;
+        [SerializeField] protected int entrances = 2;
     
         [Header("Tilemap")]
         [SerializeField] protected Tilemap tilemap;
@@ -35,6 +35,8 @@ namespace Generators
         [SerializeField] private TextMeshProUGUI textHeight;
         
         [SerializeField] private TMP_InputField inputWaitTime;
+        
+        [SerializeField] private TMP_InputField inputEntrances;
 
         [Header("Other generators")]
         [SerializeField] private CurrentGenerator currentGenerator;
@@ -53,7 +55,13 @@ namespace Generators
             new (0, -2, 0), // Down
             new (-2, 0, 0) // Left
         };
-
+        private enum MazeDirection
+        {
+            Top,
+            Bottom,
+            Left,
+            Right
+        }
         #region Lifetime functions
 
         private void Start()
@@ -61,6 +69,7 @@ namespace Generators
             inputWidth.onValueChanged.AddListener(SetWidth);
             inputHeight.onValueChanged.AddListener(SetHeight);
             inputWaitTime.onValueChanged.AddListener(SetWaitTime);
+            inputEntrances.onValueChanged.AddListener(SetEntrances);
         }
 
         #endregion
@@ -103,6 +112,7 @@ namespace Generators
         /// </summary>
         protected abstract IEnumerator GenerateMazeCoroutine(bool isSlowly = true);
     
+        
         /// <summary>
         /// Creates a blank maze for the generation.
         /// </summary>
@@ -144,25 +154,80 @@ namespace Generators
         /// </summary>
         protected void CreateEntrances()
         {
-            var numberOfEntrances = Random.Range(2, 5); // Choose the number of entrances (adjust as needed)
-
-            for (int i = 0; i < numberOfEntrances; i++)
+            for (int i = 0; i < entrances;)
             {
-                var entrancePosition = FindRandomEmptyTile();
+                var entrancePosition = Vector3Int.zero;
 
-                // Ensure entrance position is valid
-                while (!IsValidEntranceExitPosition(entrancePosition))
-                    entrancePosition = FindRandomEmptyTile();
+                // Randomly choose a side for the entrance
+                var side = Random.Range(0, 4);
 
-                // Adjust entrance position to be at the left edge
-                entrancePosition.x = -1;
+                switch (side)
+                {
+                    case 0: // Top side
+                        entrancePosition.y = height;
+                        entrancePosition.x = Random.Range(1, width - 1);
+                        if (tilemap.GetTile(new Vector3Int(entrancePosition.x, entrancePosition.y - 2,0)) == wallTile) break;
+                        SetEntrance();
+                        break;
+                    case 1: // Bottom side
+                        entrancePosition.y = 0;
+                        entrancePosition.x = Random.Range(1, width - 1);
+                        if (tilemap.GetTile(new Vector3Int(entrancePosition.x, entrancePosition.y + 1,0)) == wallTile) break;
+                        SetEntrance();
+                        break;
+                    case 2: // Left side
+                        entrancePosition.x = 0;
+                        entrancePosition.y = Random.Range(1, height - 1);
+                        if (tilemap.GetTile(new Vector3Int(entrancePosition.x + 1, entrancePosition.y,0)) == wallTile) break;
+                        SetEntrance();
+                        break;
+                    case 3: // Right side
+                        entrancePosition.x = width;
+                        entrancePosition.y = Random.Range(1, height - 1);
+                        if (tilemap.GetTile(new Vector3Int(entrancePosition.x - 2, entrancePosition.y,0)) == wallTile) break;
+                        SetEntrance();
+                        break;
+                }
 
-                // Set tiles for entrance
-                tilemap.SetTile(entrancePosition, visitedCellTile);
+                continue;
 
-                // Make the second tile for entrance, because the outer wall is 2 tiles thick
-                var entrancePosition2 = new Vector3Int(0, entrancePosition.y, 0);
-                tilemap.SetTile(entrancePosition2, visitedCellTile);
+                void SetEntrance()
+                {
+                    switch (side)
+                    {
+                        case 0:
+                        case 1:
+                        {
+                            if (tilemap.GetTile(new Vector3Int(entrancePosition.x+1, entrancePosition.y,0)) == visitedCellTile) return;
+                            if (tilemap.GetTile(new Vector3Int(entrancePosition.x-1, entrancePosition.y,0)) == visitedCellTile) return;
+                            break;
+                        }
+                        case 2:
+                        case 3:
+                        {
+                            if (tilemap.GetTile(new Vector3Int(entrancePosition.x, entrancePosition.y+1,0)) == visitedCellTile) return;
+                            if (tilemap.GetTile(new Vector3Int(entrancePosition.x, entrancePosition.y-1,0)) == visitedCellTile) return;
+                            break;
+                        }
+                    }
+
+                    i++;
+
+                    // Set tiles for entrance
+                    tilemap.SetTile(entrancePosition, visitedCellTile);
+
+                    // Make the second tile for entrance, because the outer wall is 2 tiles thick
+                    if (side == 0 || side == 1)
+                    {
+                        var entrancePosition2 = new Vector3Int(entrancePosition.x, entrancePosition.y - 1, 0);
+                        tilemap.SetTile(entrancePosition2, visitedCellTile);
+                    }
+                    else
+                    {
+                        var entrancePosition2 = new Vector3Int(entrancePosition.x - 1, entrancePosition.y, 0);
+                        tilemap.SetTile(entrancePosition2, visitedCellTile);
+                    }
+                }
             }
         }
         /// <summary>
@@ -250,36 +315,6 @@ namespace Generators
         private bool IsInsideMaze(Vector3Int tile) => tile.x >= 0 && tile.x < width && tile.y >= 0 && tile.y < height;
     
         /// <summary>
-        /// Looking at the neighbors of the entrance and exit if it's a valid position. Prevents spawning next to a wall.
-        /// </summary>
-        /// <param name="position">The preferred position.</param>
-        /// <returns>If it's valid position to spawn.</returns>
-        private bool IsValidEntranceExitPosition(Vector3Int position) => _directions.Select(direction => position + direction).Any(adjacentPosition => IsInsideMaze(adjacentPosition) && tilemap.GetTile<TileBase>(adjacentPosition) == visitedCellTile);
-    
-        /// <summary>
-        /// Find a random tile that is empty in the tile map.
-        /// </summary>
-        /// <returns>The chosen random tile.</returns>
-        private Vector3Int FindRandomEmptyTile()
-        {
-            var emptyCells = new List<Vector3Int>();
-
-            // Adds every green tile (empty tile)
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    if (tilemap.GetTile<TileBase>(new Vector3Int(x, y, 0)) == visitedCellTile) emptyCells.Add(new Vector3Int(x, y, 0));
-                }
-            }
-
-            if (emptyCells.Count != 0) return GetRandomTile(emptyCells);
-        
-            Debug.LogError("No empty cells found.");
-            return Vector3Int.zero;
-        }
-
-        /// <summary>
         /// Get a random tile in the tilemap.
         /// </summary>
         /// <param name="tiles">The list of given tile to select a random tile form.</param>
@@ -321,6 +356,14 @@ namespace Generators
             {
                 // Check if the parsed wait time is within the allowed range
                 waitTime = parsedWaitTime;
+            }
+        }
+
+        private void SetEntrances(string input)
+        {
+            if (int.TryParse(input, out int parsedEntrances))
+            {
+                entrances = parsedEntrances;
             }
         }
         #endregion

@@ -45,7 +45,7 @@ public sealed class CameraController : MonoBehaviour
     /// <param name="targetBounds">The tilemap size.</param>
     private void MoveAndZoomCamera(Bounds targetBounds)
     {
-        var targetPosition = new Vector3( targetBounds.center.y > targetBounds.center.x ? (-targetBounds.center.y)+targetBounds.center.x: targetBounds.center.x/10, targetBounds.center.y, targetBounds.center.z); print(targetBounds.center.y);
+        var targetPosition = new Vector3( targetBounds.center.y > targetBounds.center.x ? (-targetBounds.center.y)+targetBounds.center.x: targetBounds.center.x/10, targetBounds.center.y, targetBounds.center.z);
 
         var targetSize = Mathf.Max(targetBounds.size.x, targetBounds.size.y) * 0.55f;
 
