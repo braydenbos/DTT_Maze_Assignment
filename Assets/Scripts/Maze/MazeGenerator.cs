@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using UnityEngine.Tilemaps;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
-namespace Generators
+namespace Maze
 {
     /// <summary>
     /// An abstract maze generator class. Inherit this class and make a own GenerateMaze() & GenerateMazeCoroutine().
@@ -37,6 +38,9 @@ namespace Generators
         [SerializeField] private TMP_InputField inputWaitTime;
         
         [SerializeField] private TMP_InputField inputEntrances;
+        
+        [SerializeField] private TextMeshProUGUI timeGeneration;
+
 
         [Header("Other generators")]
         [SerializeField] private CurrentGenerator currentGenerator;
@@ -55,13 +59,6 @@ namespace Generators
             new (0, -2, 0), // Down
             new (-2, 0, 0) // Left
         };
-        private enum MazeDirection
-        {
-            Top,
-            Bottom,
-            Left,
-            Right
-        }
         #region Lifetime functions
 
         private void Start()
@@ -365,6 +362,16 @@ namespace Generators
             {
                 entrances = parsedEntrances;
             }
+        }
+
+        protected void SetTime(TimeSpan time)
+        {
+            var totalTime = "Time: ";
+            if (time.Hours > 0) totalTime += $"Hours {time.Hours} ";
+            if (time.Minutes > 0) totalTime += $"Minutes {time.Minutes} ";
+            if (time.Seconds > 0) totalTime += $"Seconds {time.Seconds} ";
+            totalTime += $"Milliseconds {time.Milliseconds}";
+            timeGeneration.text = totalTime;
         }
         #endregion
     }

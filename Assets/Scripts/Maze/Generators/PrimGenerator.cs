@@ -1,8 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
-namespace Generators
+namespace Maze.Generators
 {
     /// <summary>
     /// Prim's Algorithm. Inheritance from MazeGenerator.
@@ -13,9 +15,12 @@ namespace Generators
 
         protected override IEnumerator GenerateMazeCoroutine(bool isSlowly = true)
         {
+            DateTime before = DateTime.Now;
+
             // Initialize the visitedCells array and the cell stack
             VisitedCells = new bool[width, height];
             CellStack = new Stack<Vector3Int>();
+            bool nextVisitIsVisited = false;
         
             SetupMaze();
 
@@ -29,7 +34,7 @@ namespace Generators
             // Loop until all cells have been visited
             while (!AllTilesVisited())
             {
-                if (isSlowly)
+                if (isSlowly && !nextVisitIsVisited)
                 {
                     yield return new WaitForSeconds(waitTime); // Pause execution and resume
                 }
@@ -50,11 +55,20 @@ namespace Generators
 
                     // Add the neighbor to the cell stack
                     CellStack.Push(randomNeighbor);
+                    nextVisitIsVisited = false;
                 }
-                else CellStack.Pop(); // If all neighbors have been visited, remove the current cell from the stack
+                else
+                {
+                    CellStack.Pop();
+                    nextVisitIsVisited = true;
+                }
+
             }
 
             CreateEntrances();
+            DateTime after = DateTime.Now;
+            TimeSpan duration = after.Subtract(before);
+            SetTime(duration);
         }
     }
 }

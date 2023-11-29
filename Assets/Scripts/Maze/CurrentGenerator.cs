@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Generators
+namespace Maze
 {
     public sealed class CurrentGenerator : MonoBehaviour
     {

@@ -1,0 +1,79 @@
++------------------------------------+
+|              ExitGame              |
++------------------------------------+
+| + Exit() : void                    |
++------------------------------------+
+
++--------------------------------------+
+|        CameraController              |
++--------------------------------------+
+| - tilemap: Transform                 |
+| - padding: float                     |
+| - _mainCamera: Camera                |
++--------------------------------------+
+| + SetCameraPosition() : void         |
+| - CalculateTilemapBounds() : Bounds  |
+| - MoveAndZoomCamera() : void         |
++--------------------------------------+
+
++------------------------------------+
+|      CurrentGenerator              |
++------------------------------------+
+| - CurrentGeneration: Coroutine     |
++------------------------------------+
+
++--------------------------------------+
+|           MazeGenerator               |
++--------------------------------------+
+| - width: int                          |
+| - height: int                         |
+| - generateInstantly: bool             |
+| - waitTime: float                     |
+| - entrances: int                      |
+| - tilemap: Tilemap                    |
+| - wallTile: TileBase                  |
+| - unvisitedCellTile: TileBase         |
+| - visitedCellTile: TileBase           |
+| - inputWidth: Slider                  |
+| - inputHeight: Slider                 |
+| - textWidth: TextMeshProUGUI          |
+| - textHeight: TextMeshProUGUI         |
+| - inputWaitTime: TMP_InputField       |
+| - inputEntrances: TMP_InputField      |
+| - timeGeneration: TextMeshProUGUI     |
+| - currentGenerator: CurrentGenerator  |
+| - otherGenerator: MazeGenerator       |
+| - onGenerate: UnityEvent              |
+| - VisitedCells: bool[,]               |
+| - CellStack: Stack<Vector3Int>        |
+| - _directions: Vector3Int[]           |
++-------------------------------------------------------+
+| + StartGenerating() : void            		|
+| - SetupMaze() : void                   		|
+| - CreateEntrances() : void             		|
+| - FindAndSetStartPositions() : List<Vector3Int>	|
+| - AllTilesVisited() : bool             		|
+| - UpdateTileColor() : void             		|
+| - GetUnvisitedNeighbors() : List<Vector3Int> 		|
+| - IsInsideMaze() : bool                		|
+| - GetRandomTile() : Vector3Int         		|
+| - SetHeight(float) : void               		|
+| - SetWidth(float) : void                		|
+| - SetWaitTime(string) : void           		|
+| - SetEntrances(string) : void         		|
+| - SetTime(TimeSpan) : void             		|
++-------------------------------------------------------+
+
++------------------------------------------------------+
+|       RecursiveBacktrackingGenerator                 |
++------------------------------------------------------+
++ GenerateMaze() : void                                |
++ GenerateMazeCoroutine(bool) : IEnumerator            |
++------------------------------------------------------+
+
++-----------------------------------------------+
+|           PrimGenerator             		|
++-----------------------------------------------+
+| + GenerateMaze() : void             		|
+| + GenerateMazeCoroutine(bool) : IEnumerator 	|
++-----------------------------------------------+

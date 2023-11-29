@@ -1,8 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
-namespace Generators
+namespace Maze.Generators
 {
     /// <summary>
     /// Recursive Backtracking Algorithm (Depth-First Search). Inheritance from MazeGenerator.
@@ -15,8 +17,10 @@ namespace Generators
 
         protected override IEnumerator GenerateMazeCoroutine(bool isSlowly = true)
         {
+            DateTime before = DateTime.Now;
             VisitedCells = new bool[width, height]; // Initialize the visitedCells array
             CellStack = new Stack<Vector3Int>(); // Initialize the cell stack
+            bool nextVisitIsVisited = false;
 
             SetupMaze();
 
@@ -31,7 +35,7 @@ namespace Generators
             // Loop until all cells have been in the CellStack
             while (CellStack.Count > 0)
             {
-                if (isSlowly) 
+                if (isSlowly && !nextVisitIsVisited) 
                 {
                     yield return new WaitForSeconds(waitTime); // Pause execution and resume
                 }
@@ -46,12 +50,14 @@ namespace Generators
                     var randomNeighbor = unvisitedNeighbors[Random.Range(0, unvisitedNeighbors.Count)];
                     UpdateTileColor(currentCell, randomNeighbor);
                     CellStack.Push(randomNeighbor);
+                    nextVisitIsVisited = false;
                 }
                 else
                 {
                     // Mark the current cell as visited after backtracking
                     UpdateTileColor(currentCell);
                     CellStack.Pop();
+                    nextVisitIsVisited = true;
                 }
 
                 // Stop the maze generation process
@@ -59,6 +65,9 @@ namespace Generators
             }
 
             CreateEntrances();
+            DateTime after = DateTime.Now;
+            TimeSpan duration = after.Subtract(before);
+            SetTime(duration);
         }
     
         #endregion
